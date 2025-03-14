@@ -1,0 +1,324 @@
+	AREA QUIZ, CODE, READONLY
+	ENTRY
+	
+	;Loading addresses to registers
+
+	LDR sp, =stackPointer
+	LDR r0, =arr
+	LDR r1, =Leftarr
+	LDR r2, =Rightarr
+	LDR r3, =result
+	LDR r5, =Sub1
+	LDR r6, =Sub2
+	
+	PUSH{r0-r6, LR}
+	
+	MOV r8, #0
+		
+	;Splitting the array to a Left half
+LeftSplit
+	CMP r8, #5
+	BEQ RightSplit ;when counter is equal to 5, the array has been split to a left half
+	
+	LDR r9, [r0], #4 ;copies the element of the array then increments the address pointer
+	STR r9, [r1], #4 ;stores the element into Leftarr
+	ADD r8, r8, #1 ;incrementing counter
+	B LeftSplit
+	
+	;Splitting the array to a right half
+RightSplit
+	CMP r8, #10
+	BEQ ResetCounter ;when counter reaches 10 entire array has been copied
+	
+	LDR r9, [r0], #4 ;copies the element of the array then increments the address pointer
+	STR r9, [r2], #4 ;stores the element into Rightarr
+	ADD r8, r8, #1 ;incrementing counter
+	B RightSplit
+	
+	;resetting the counter and clearing r9 of any rubbish values
+ResetCounter
+	MOV r8, #0
+	MOV r9, #0
+	
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	
+	;Splitting the left array further to 2 sub-arrays
+LeftSplit1
+	CMP r8, #3
+	BEQ LeftSplit2
+	
+	LDR r9, [r1], #4
+	STR r9, [r5], #4
+	ADD r8, r8, #1
+	B LeftSplit1
+	
+LeftSplit2
+	CMP r8, #5
+	BEQ LeftCompare1
+	
+	LDR r9, [r1], #4
+	STR r9, [r6], #4
+	ADD r8, r8, #1
+	B LeftSplit2
+	
+LeftCompare1
+	;loading elements of Sub1 into registors to compare
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	LDR r10, [r5]
+	LDR r11, [r5, #4]
+	LDR r12, [r5, #8]
+	
+	;comparing by element
+	
+	;compare elements 1 and 2
+	CMP r10, r11
+	MOVGT r7, r10
+	MOVGT r10, r11
+	MOVGT r11, r7
+	
+	;compare elements 1 and 3
+	CMP r10, r12
+	MOVGT r7, r10
+	MOVGT r9, r11
+	MOVGT r10, r12
+	MOVGT r11, r7
+	MOVGT r12, r9
+	
+	;compare elements 2 and 3
+	CMP r11, r12
+	MOVGT r7, r11
+	MOVGT r11, r12
+	MOVGT r12, r7
+	
+	;storing sorted elements into sub-array
+	STR r10, [r5]
+	STR r11, [r5, #4]
+	STR r12, [r5, #8]
+		
+	;Comparing elements of Sub2
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	LDR r10, [r6]
+	LDR r11, [r6, #4]
+	
+	CMP r10, r11
+	MOVGT r7, r10
+	MOVGT r10, r11
+	MOVGT r11, r7
+	
+	;storing the sorted elements
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	STR r10, [r6]
+	STR r11, [r6, #4]
+	
+	;intialising counters and moving elements into registers to merge the left subarrays
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	MOV r8, #3
+	MOV r9, #2
+	LDR r10, [r5], #4
+	LDR r11, [r6], #4
+MergeLeft ;merge loop
+	CMP r8, #0
+	BEQ Sub1Exhausted_L
+	CMP r9, #0
+	BEQ Sub2Exhausted_L
+	CMP r10, r11
+	BLT StoreFromSub1_L
+	BGT StoreFromSub2_L
+StoreFromSub1_L ;storing from Sub1 into Leftarr
+	STR r10, [r1], #4
+	LDR r10, [r5], #4
+	SUB r8, r8, #1
+	B MergeLeft
+StoreFromSub2_L ;storing from Sub2 into Leftarr
+	STR r11 , [r1], #4
+	LDR r11 , [r6], #4
+	SUB r9, r9, #1
+	B MergeLeft
+Sub1Exhausted_L ;storing the remaining elements once Sub1 is exhausted
+	STR r11, [r1], #4
+	LDR r11, [r6], #4
+	SUB r9, r9, #1
+	CMP r9, #0
+	BNE Sub1Exhausted_L
+	BEQ LeftSorted
+Sub2Exhausted_L ;storing the remaining elements once Sub2 is exhausted
+	STR r10, [r1], #4
+	LDR r10, [r5], #4
+	SUB r8, r8, #1
+	CMP r8, #0
+	BNE Sub2Exhausted_L
+	BEQ LeftSorted
+
+LeftSorted	
+	;splitting the right half of the array
+	
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	
+RightSplit1
+	CMP r8, #3
+	BEQ RightSplit2
+	LDR r9, [r2], #4
+	STR r9, [r5], #4
+	ADD r8, r8, #1
+	B RightSplit1
+	
+RightSplit2
+	CMP r8, #5
+	BEQ RightCompare1
+	
+	LDR r9, [r2], #4
+	STR r9, [r6], #4
+	ADD r8, r8, #1
+	B RightSplit2
+	
+RightCompare1
+	;loading elements of Sub2 into registors to compare
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	LDR r10, [r5]
+	LDR r11, [r5, #4]
+	LDR r12, [r5, #8]
+	
+	;comparing by element
+	
+	;compare elements 1 and 2
+	CMP r10, r11
+	MOVGT r7, r10
+	MOVGT r10, r11
+	MOVGT r11, r7
+	
+	;compare elements 1 and 3
+	CMP r10, r12
+	MOVGT r7, r10
+	MOVGT r9, r11
+	MOVGT r10, r12
+	MOVGT r11, r7
+	MOVGT r12, r9
+	
+	;compare elements 2 and 3
+	CMP r11, r12
+	MOVGT r13, r11
+	MOVGT r11, r12
+	MOVGT r12, r13
+	
+	;storing sorted elements into sub-array
+	STR r10, [r5]
+	STR r11, [r5, #4]
+	STR r12, [r5, #8]
+		
+	;Comparing elements of Sub2
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+	LDR r10, [r6]
+	LDR r11, [r6, #4]
+	
+	CMP r10, r11
+	MOVGT r13, r10
+	MOVGT r11, r10
+	MOVGT r13, r11
+	
+	STR r10, [r6]
+	STR r11, [r6, #4]
+	
+	;intialising counters and loading elements into registers to merge the right subarrays
+	MOV r8, #3
+	MOV r9, #2
+	LDR r10, [r5], #4
+	LDR r11, [r6],#4
+MergeRight
+	CMP r8, #0
+	BEQ Sub1Exhausted_R
+	CMP r9, #0
+	BEQ Sub2Exhausted_R
+	CMP r10, r11
+	BLT StoreFromSub1_R
+	BGT StoreFromSub2_R
+StoreFromSub1_R
+	STR r10, [r2], #4
+	LDR r10, [r5], #4
+	SUB r8, r8, #1
+	B MergeRight
+StoreFromSub2_R
+	STR r11 , [r2], #4
+	LDR r11 , [r6], #4
+	SUB r9, r9, #1
+	B MergeRight
+Sub1Exhausted_R
+	STR r11, [r2], #4
+	LDR r11, [r6], #4
+	SUB r9, r9, #1
+	CMP r9, #0
+	BNE Sub1Exhausted_R
+	BEQ RightSorted
+Sub2Exhausted_R
+	STR r10, [r2], #4
+	LDR r10, [r5], #4
+	SUB r8, r8, #1
+	CMP r8, #0
+	BNE Sub2Exhausted_R
+	BEQ RightSorted
+
+RightSorted
+	POP{r0-r6, LR}
+	PUSH{r0-r6, LR}
+
+	MOV r8, #5
+	MOV r9, #5
+	LDR r10, [r1], #4
+	LDR r11, [r2], #4
+	
+Merge
+	CMP r8, #0
+	BEQ LeftarrExhausted
+	CMP r9, #0
+	BEQ RightarrExhausted
+	CMP r10, r11
+	BLT StoreFromLeftarr
+	BGT StoreFromRightarr
+StoreFromLeftarr
+	STR r10, [r3], #4
+	LDR r10, [r1], #4
+	SUB r8, r8, #1
+	B Merge
+StoreFromRightarr
+	STR r11, [r3], #4
+	LDR r11, [r2], #4
+	SUB r9, r9, #1
+	B Merge
+LeftarrExhausted
+	STR r11, [r3], #4
+	LDR r11, [r2], #4
+	SUB r9, r9, #1
+	CMP r9, #0
+	BNE LeftarrExhausted
+	BEQ Sorted
+RightarrExhausted
+	STR r10, [r3], #4
+	LDR r10, [r1], #4
+	SUB r8, r8, #1
+	CMP r8, #0
+	BNE RightarrExhausted
+	BEQ Sorted
+Sorted
+
+Done
+	B Done
+	
+	
+arr DCD 8,50,81,29,4,24,23,30,1,7	
+	
+	AREA QUIZ, DATA, READWRITE
+stackPointer EQU 0x60004000
+result EQU 0x60000000
+Leftarr EQU 0x60000100
+Sub1 EQU 0x60002000
+Sub2 EQU 0x60003000
+Rightarr EQU 0x60001000
+	
+	END
